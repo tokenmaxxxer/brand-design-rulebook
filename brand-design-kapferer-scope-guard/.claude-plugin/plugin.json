@@ -1,0 +1,10 @@
+{
+  "name": "brand-design-kapferer-scope-guard",
+  "description": "Owns Kapferer Physique-facet scope acknowledgement (phase-1) and prohibitions acknowledgement (phase-2) for brand-design (issue-10).",
+  "author": {
+    "name": "Jung Jiwon & Lee Jongkwan"
+  },
+  "dependencies": {
+    "note": "Meant to be installed alongside the base brand-design plugin (SessionStart directive, write_scope) and its sibling brand-design-* plugins; not independently useful. Requires core/warrant plugins from tokenmaxxxer-core (core issues #63/#66)."
+  }
+}

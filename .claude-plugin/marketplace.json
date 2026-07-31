@@ -8,6 +8,26 @@
       "name": "brand-design",
       "source": "./brand-design",
       "description": "The brand-design role on contract v3 (issue-160 round-3 promotion). Decides: 브랜드 정체성이 시각적으로 일관되는가."
+    },
+    {
+      "name": "brand-design-guide-and-spec",
+      "source": "./brand-design-guide-and-spec",
+      "description": "Owns brand guide entry + asset spec presence/cross-reference for brand-design phase-2 records (issue-10)."
+    },
+    {
+      "name": "brand-design-wcag-consistency",
+      "source": "./brand-design-wcag-consistency",
+      "description": "Owns consistency-check + WCAG contrast gate for brand-design phase-2 records (issue-10)."
+    },
+    {
+      "name": "brand-design-system-handoff",
+      "source": "./brand-design-system-handoff",
+      "description": "Owns design-system source-paths check + the ux-engineering hand-off boundary discipline (issue-10)."
+    },
+    {
+      "name": "brand-design-kapferer-scope-guard",
+      "source": "./brand-design-kapferer-scope-guard",
+      "description": "Owns Kapferer Physique-facet scope acknowledgement (phase-1) and prohibitions acknowledgement (phase-2) (issue-10)."
     }
   ]
 }

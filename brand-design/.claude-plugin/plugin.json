@@ -5,6 +5,6 @@
     "name": "Jung Jiwon & Lee Jongkwan"
   },
   "dependencies": {
-    "note": "Requires the core and warrant plugins from tokenmaxxxer-core installed alongside this plugin (core issues #63/#66). on-the-record installs them per role; this field only documents the requirement."
+    "note": "Requires the core and warrant plugins from tokenmaxxxer-core installed alongside this plugin (core issues #63/#66). on-the-record installs them per role; this field only documents the requirement. Also meant to be installed together with the four brand-design-* methodology plugins (brand-design-guide-and-spec, brand-design-wcag-consistency, brand-design-system-handoff, brand-design-kapferer-scope-guard, issue-10) — none of them is independently useful without this plugin's SessionStart directive and write_scope."
   }
 }
