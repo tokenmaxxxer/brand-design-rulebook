@@ -44,6 +44,41 @@ run_payload() {
 
 jstr() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
 
+# --- static: hooks.json PreToolUse matcher covers every tool-name literal
+# methodology-gate.sh branches on (no uncovered literal today) -------------
+HOOKS_JSON="$HERE/../hooks.json"
+matcher="$(python3 -c '
+import json,sys
+try:
+    with open(sys.argv[1]) as f:
+        d = json.load(f)
+    print(d["hooks"]["PreToolUse"][0]["matcher"])
+except Exception:
+    print("")
+' "$HOOKS_JSON")"
+IFS='|' read -r -a matcher_alts <<< "$matcher"
+uncovered=""
+# Only scan lines where the gate branches on the parsed tool-name variable
+# (e.g. `tool not in (...)`, `tool ==`), not arbitrary quoted strings
+# elsewhere in the file (label words, paths, etc.).
+tool_name_lits="$(grep -E '\btool (not )?in \(|\btool ==' "$GATE" | grep -oE '"[A-Za-z][A-Za-z0-9]*"' | tr -d '"' | sort -u)"
+for lit in $tool_name_lits; do
+  found=0
+  for alt in "${matcher_alts[@]}"; do
+    [ "$alt" = "$lit" ] && found=1 && break
+  done
+  if [ "$found" -eq 0 ]; then
+    uncovered="$uncovered $lit"
+  fi
+done
+if [ -n "$uncovered" ]; then
+  fail=$((fail+1))
+  printf 'FAIL   %-34s hooks.json matcher=%s missing coverage for:%s\n' "matcher-vs-gate-tool-coverage" "$matcher" "$uncovered"
+else
+  pass=$((pass+1))
+  printf 'ok     %-34s matcher=%s covers all gate tool-name literals\n' "matcher-vs-gate-tool-coverage" "$matcher"
+fi
+
 run deny  wcag-number-unlabeled "$REC" 'consistency check: new text/background pairing introduced, contrast ratio measured at 4.6'
 run allow no-new-pairing-early-exit "$REC" 'consistency check: no new text/background pairing introduced this change.'
 run allow wcag-complete "$REC" $'consistency check: new pairing\ncontrast ratio 4.6:1, pass against AA 4.5:1.'
@@ -149,6 +184,17 @@ scoping_good='## consistency check
 
 new text/background pairing introduced, contrast ratio 4.6:1, pass against AA 4.5:1.'
 run allow scoping-co-located-allows "$REC" "$scoping_good"
+
+# --- group 7: missing-core -> guarded source must deny, not silently allow
+td_g="$(cd "$(mktemp -d)" && pwd -P)"; git init -q "$td_g"; mkdir -p "$td_g/docs/issue-10/reports"
+printf '{"tool_name":"Write","tool_input":{"file_path":"%s","content":%s}}' \
+  "$REC" "$(jstr 'consistency check: no new text/background pairing introduced this change.')" \
+  | env CLAUDE_ROLE=brand-design CLAUDE_PROJECT_DIR="$td_g" \
+    CLAUDE_PLUGIN_ROOT_CORE="$td_g/no-such-core" \
+    /bin/bash "$GATE" >/dev/null 2>&1
+rc=$?; case "$rc" in 0) got=allow ;; 2) got=deny ;; *) got="exit-$rc" ;; esac
+report deny "$got" missing-core-guarded-source-denies
+rm -rf "$td_g"
 
 printf '\n== %d passed, %d failed ==\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

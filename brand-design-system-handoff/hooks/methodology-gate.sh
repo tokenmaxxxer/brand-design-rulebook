@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-. "${CLAUDE_PLUGIN_ROOT_CORE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../core" && pwd -P)}/hooks/lib/gate-lib.sh"
+. "${CLAUDE_PLUGIN_ROOT_CORE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../core" && pwd -P)}/hooks/lib/gate-lib.sh" || { echo "methodology-gate.sh: cannot source gate-lib.sh" >&2; exit 2; }
 gate_trap_fail_closed
 # PreToolUse gate (Write|Edit|MultiEdit) — brand-design-role-specific, on top
 # of (never instead of) the core canon record-fields-gate.sh's generic §20
@@ -142,7 +142,9 @@ try:
     NOT_APPLICABLE_RE = re.compile(r'(?i)\bnot applicable\b|\bno new pairing introduced\b')
     # A literal repo path token: contains "/", not this repo's own
     # write-surface patterns (proposal/record path regexes), not a URL.
-    PATH_TOKEN_RE = re.compile(r'`?([\w][\w./-]*\/[\w][\w./-]*)`?')
+    PATH_TOKEN_RE = re.compile(
+        r'`?((?:docs|src|assets|core|brand-design(?:-[\w-]+)?)/[\w./-]*\.[\w]+|`[\w][\w./-]*/[\w][\w./-]*\.[\w]+`)`?'
+    )
 
     def is_own_surface_or_url(cand):
         if PROPOSAL_RE.match(cand) or RECORD_RE.match(cand):
