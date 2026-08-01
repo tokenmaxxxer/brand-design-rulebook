@@ -20,7 +20,9 @@ claude plugin install brand-design
 ## Layout
 
 - `brand-design/.claude-plugin/plugin.json` — plugin manifest
-- `brand-design/hooks/hooks.json` — SessionStart + PreToolUse wiring
+- `brand-design/hooks/hooks.json` — SessionStart wiring only (role
+  directive); each `brand-design-*/hooks/hooks.json` carries its own
+  PreToolUse gate wiring — see below.
 - `brand-design/hooks/directive.sh` — SessionStart role directive
 - `brand-design-guide-and-spec/` — brand guide entry + asset spec
   presence/cross-reference gate; see its own README.

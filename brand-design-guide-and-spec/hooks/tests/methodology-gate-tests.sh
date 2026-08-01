@@ -21,6 +21,39 @@ report() { if [ "$2" = "$1" ]; then pass=$((pass+1)); printf 'ok     %-34s %s\n'
 
 REC=docs/issue-10/reports/brand-design.md
 
+# --- static: hooks.json PreToolUse matcher covers every tool-name literal
+# methodology-gate.sh branches on (regression guard, modeled on
+# brand-design-wcag-consistency's hooks/tests/methodology-gate-tests.sh
+# static check). No violation today. ---
+HOOKS_JSON="$HERE/../hooks.json"
+matcher="$(python3 -c '
+import json,sys
+try:
+    with open(sys.argv[1]) as f:
+        d = json.load(f)
+    print(d["hooks"]["PreToolUse"][0]["matcher"])
+except Exception:
+    print("")
+' "$HOOKS_JSON")"
+IFS='|' read -r -a matcher_alts <<< "$matcher"
+uncovered=""
+for lit in $(grep -oE '"[A-Za-z][A-Za-z0-9]*"' "$GATE" | tr -d '"' | sort -u); do
+  found=0
+  for alt in "${matcher_alts[@]}"; do
+    [ "$alt" = "$lit" ] && found=1 && break
+  done
+  if [ "$found" -eq 0 ] && grep -qE "tool ==? \"$lit\"|tool_name.*\"$lit\"|\"$lit\".*tool|\(\"$lit\", \"" "$GATE"; then
+    uncovered="$uncovered $lit"
+  fi
+done
+if [ -n "$uncovered" ]; then
+  fail=$((fail+1))
+  printf 'FAIL   %-34s hooks.json matcher=%s missing coverage for:%s\n' "matcher-vs-gate-tool-coverage" "$matcher" "$uncovered"
+else
+  pass=$((pass+1))
+  printf 'ok     %-34s matcher=%s covers all gate tool-name literals\n' "matcher-vs-gate-tool-coverage" "$matcher"
+fi
+
 # want name file content
 run() {
   td="$(cd "$(mktemp -d)" && pwd -P)"; git init -q "$td"; mkdir -p "$td/docs/issue-10/reports"
@@ -96,18 +129,22 @@ EDIT_START='logo usage: keep 8px clear space.
 
 typography: heading uses Pretendard Bold.
 
-asset spec: PLACEHOLDER applies PLACEHOLDER'
+asset spec: assets/PLACEHOLDER/logo.PLACEHOLDER'
 run_edit allow edit-replace_all-multi-occurrence "$EDIT_START" \
-  "PLACEHOLDER" "assets/brand/header-bg.svg" "true"
+  "PLACEHOLDER" "svg" "true"
 
-# NB: replace_all:false still satisfies asset_spec_ok here because the gate
-# only requires ONE extension/hex match somewhere in the label's paragraph
-# (not that every token be resolved) — so the reconstructed text (first
-# PLACEHOLDER replaced, second left as-is) still allows. The distinctness
-# from replace_all:true is proven by edit-replace_all-multi-occurrence's own
-# reconstructed-content assertion below.
-run_edit allow edit-replace_all-false-first-occurrence-only "$EDIT_START" \
-  "PLACEHOLDER" "assets/brand/header-bg.svg" "false"
+# replace_all:false denies: old_string occurs twice in the asset-spec
+# paragraph (once inside the path segment, once as the extension) and
+# str.replace(old,new,1)-style first-occurrence-only reconstruction only
+# resolves the leftmost one ("assets/svg/logo.PLACEHOLDER") — the
+# extension is still the literal, unresolved "PLACEHOLDER" token, which
+# matches neither PATH_OR_FORMAT_RE nor HEX_RE, so asset_spec_ok() stays
+# false and the write is denied. Only replace_all:true resolves BOTH
+# occurrences to "assets/svg/logo.svg", giving a real ".svg" extension
+# match and an allow — proving replace_all is genuinely honored rather
+# than the test being outcome-blind to it.
+run_edit deny edit-replace_all-false-first-occurrence-only "$EDIT_START" \
+  "PLACEHOLDER" "svg" "false"
 
 # --- group 2: MultiEdit with a mix of replace_all true/false edits. ---
 run_multiedit() { # want name starting-content edits-json
@@ -167,6 +204,18 @@ run_abspath deny  absolute-path-brand-guide-entry-missing '$td/'"$REC" 'nothing 
 # gate's declared scope -> exits 0, documenting current behavior. ---
 BASH_PAYLOAD="$(python3 -c 'import json; print(json.dumps({"tool_name":"Bash","tool_input":{"command":"echo nothing here about the brand > docs/issue-10/reports/brand-design.md"}}))')"
 run_payload allow bash-tool-out-of-scope "$BASH_PAYLOAD"
+
+# --- group 7: missing-core -> guarded gate-lib.sh source must deny, not
+# silently allow (modeled on core/hooks/tests/run-gate-lib-tests.sh's own
+# missing-core case, ~line 230). Reuses record-complete's payload shape but
+# points CLAUDE_PLUGIN_ROOT_CORE at a nonexistent path, so the `||` guard
+# added to the gate-lib.sh source line must fire and exit 2. ---
+td="$(cd "$(mktemp -d)" && pwd -P)"; git init -q "$td"; mkdir -p "$td/docs/issue-10/reports"
+out="$(printf '{"tool_name":"Write","tool_input":{"file_path":"%s","content":%s}}' \
+    "$REC" "$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$RECORD_COMPLETE")" \
+  | env CLAUDE_PROJECT_DIR="$td" CLAUDE_PLUGIN_ROOT_CORE="$td/no-such-core" /bin/bash "$GATE" 2>&1)"
+rc=$?; case "$rc" in 0) got=allow ;; 2) got=deny ;; *) got="exit-$rc" ;; esac
+rm -rf "$td"; report deny "$got" "missing-core-gate-lib-guard-denies"
 
 printf '\n== %d passed, %d failed ==\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

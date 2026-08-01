@@ -38,6 +38,35 @@ run_payload() { # want name payload td_setup_fn
 
 jstr() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
 
+# ---- static assertion: hooks.json PreToolUse matcher and this gate's own
+# tool-name coverage must agree (regression guard for future drift) ----
+HOOKS_JSON="$HERE/../hooks.json"
+matcher="$(grep -o '"matcher"[[:space:]]*:[[:space:]]*"[^"]*"' "$HOOKS_JSON" | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/')"
+IFS='|' read -r -a matcher_tools <<< "$matcher"
+uncovered=""
+for lit in $(grep -oE '"[A-Za-z][A-Za-z0-9]*"' "$GATE" | tr -d '"' | sort -u); do
+  case "$lit" in
+    Write|Edit|MultiEdit) continue ;;
+  esac
+  found=0
+  for mt in "${matcher_tools[@]}"; do
+    [ "$mt" = "$lit" ] && { found=1; break; }
+  done
+  # only flag literals that also appear as a tool-name-shaped branch literal
+  # (i.e. ones that are among the gate's own known Write/Edit/MultiEdit set
+  # semantics) — approximate by checking it's compared against tool_name
+  if [ "$found" -eq 0 ] && grep -qE "tool ==? \"$lit\"|tool_name.*\"$lit\"|\"$lit\".*tool" "$GATE"; then
+    uncovered="$uncovered $lit"
+  fi
+done
+if [ -n "$uncovered" ]; then
+  fail=$((fail+1))
+  printf 'FAIL   %-34s hooks.json matcher missing:%s\n' "matcher-coverage-static-check" "$uncovered"
+else
+  pass=$((pass+1))
+  printf 'ok     %-34s %s\n' "matcher-coverage-static-check" "consistent"
+fi
+
 # ---- existing cases (fixture content updated for label/heading-shaped,
 # adjacency-scoped semantics) ----
 run deny  scope-boundary-missing "$PROPOSAL" 'This proposal covers everything about the brand.'
@@ -115,6 +144,14 @@ run_payload_dotslash allow dotslash-path-scope-boundary-present "$PROPOSAL" $'Sc
 # ---- (f) A non-Write/Edit/MultiEdit tool (Bash) — out of scope, exit 0 ----
 payload_bash_tool='{"tool_name":"Bash","tool_input":{"command":"echo hi"}}'
 run_payload allow non-write-tool-out-of-scope "$payload_bash_tool" ""
+
+# ---- group 7: missing-core — CLAUDE_PLUGIN_ROOT_CORE points at a
+# nonexistent path; gate-lib.sh cannot be sourced, so the gate must fail
+# closed (deny) rather than silently allow (modeled on core's own
+# run-gate-lib-tests.sh missing-core pattern) ----
+td_missing_core="$(cd "$(mktemp -d)" && pwd -P)"
+CLAUDE_PLUGIN_ROOT_CORE="$td_missing_core/no-such-core" run_payload deny missing-core-fails-closed "$payload_bash_tool" ""
+rm -rf "$td_missing_core"
 
 printf '\n== %d passed, %d failed ==\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
