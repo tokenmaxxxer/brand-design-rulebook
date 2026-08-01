@@ -22,11 +22,25 @@ claude plugin install brand-design
 - `brand-design/.claude-plugin/plugin.json` — plugin manifest
 - `brand-design/hooks/hooks.json` — SessionStart + PreToolUse wiring
 - `brand-design/hooks/directive.sh` — SessionStart role directive
-- `brand-design/hooks/record-fields-gate.sh` — this role's record required-field gate
-- `brand-design/hooks/trailer-gate.sh` — commit `Subject: issue-<n>` trailer gate
-- `brand-design/hooks/handbook-trigger-gate.sh` — s21 handbook-sync gate
-- `brand-design/agents/warrant-hunter.md` — rotating-stance hunt agent
+- `brand-design-guide-and-spec/` — brand guide entry + asset spec
+  presence/cross-reference gate; see its own README.
+- `brand-design-kapferer-scope-guard/` — Kapferer Physique-facet scope
+  acknowledgement (phase-1) and prohibitions acknowledgement (phase-2)
+  gate; see its own README.
+- `brand-design-system-handoff/` — design-system source-paths check +
+  the ux-engineering hand-off boundary gate; see its own README.
+- `brand-design-wcag-consistency/` — consistency-check + WCAG contrast
+  gate; see its own README.
 - `docs/specs/approvers.md` — Approve-authority allowlist (see below)
+
+Each `brand-design-*/hooks/methodology-gate.sh` reference-adopts
+`core/hooks/lib/gate-lib.sh` + `gate-lib.py`
+(`docs/handbooks/gate-house-standard.md` in the `tokenmaxxxer-core` repo)
+for its fail-closed trap, kill-switch, JSON parsing, path normalization,
+and Write/Edit/MultiEdit reconstruction — never reimplemented locally.
+Each gate's own kill switch is documented in its README (unrecognized
+values leave the gate active, per `gate_kill_switch_active`'s fixed
+convention).
 
 This is scaffolding, not a finished rulebook: fill in doctrine detail,
 handoff enforcement, and any role-specific progress gate before treating
