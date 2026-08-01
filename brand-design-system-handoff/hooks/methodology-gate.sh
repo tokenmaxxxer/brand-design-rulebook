@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-__fc(){ rc=$?; if [ "$rc" != 0 ] && [ "$rc" != 2 ]; then echo "fail-closed: gate aborted (rc=$rc)" >&2; exit 2; fi; }
-trap __fc EXIT
+. "${CLAUDE_PLUGIN_ROOT_CORE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../core" && pwd -P)}/hooks/lib/gate-lib.sh"
+gate_trap_fail_closed
 # PreToolUse gate (Write|Edit|MultiEdit) — brand-design-role-specific, on top
 # of (never instead of) the core canon record-fields-gate.sh's generic §20
 # fields. Modeled on pricing-rulebook's pricing/hooks/methodology-gate.sh
 # (cite: docs/issue-10/reports/brand-design/scout-brief.md must-bes 2-4, 7).
+#
+# Migrated to the gate-house standard (core issue #72) per issue-13's B-
+# grade audit remediation, mirroring wcag-em-gate/hooks/methodology-gate.sh
+# (accessibility-rulebook issue-10) as the live precedent.
 #
 # Owns exactly one methodology concern (cite: docs/issue-10/proposals/
 # 2026-07-31-brand-design-directive-hardening.md, "Plugin set overview"):
@@ -14,16 +18,15 @@ trap __fc EXIT
 #
 # Targets: docs/issue-<n>/reports/brand-design.md (phase-2 record) only.
 #
-# Kill switch: export BRAND_DESIGN_SYSTEM_HANDOFF_GATE_OFF=1
+# Kill switch: export BRAND_DESIGN_SYSTEM_HANDOFF_GATE_OFF=1 (any other
+# value leaves it active, per gate_kill_switch_active's fixed on-spelling
+# set — 1/true/yes/on).
 set -uo pipefail
 
 role="${CLAUDE_ROLE:-brand-design}"
 deny() { echo "${role}: refused — $1" >&2; exit 2; }
 
-case "${BRAND_DESIGN_SYSTEM_HANDOFF_GATE_OFF:-}" in
-  ""|0|false|no|off) ;;
-  *) exit 0 ;;
-esac
+gate_kill_switch_active "${BRAND_DESIGN_SYSTEM_HANDOFF_GATE_OFF:-}" || { trap - EXIT; exit 0; }
 
 command -v python3 >/dev/null 2>&1 || deny "methodology-gate.sh requires python3, which is not on PATH; denying rather than guessing."
 
@@ -66,89 +69,55 @@ fi
 [ -z "$root" ] && root="$(git -C "$(pwd -P)" rev-parse --show-toplevel 2>/dev/null || true)"
 [ -z "$root" ] && deny "no project root could be determined; failing closed (methodology check cannot run)."
 
-PG_PAYLOAD="$payload" PG_ROOT="$root" \
+PG_PAYLOAD="$payload" PG_ROOT="$root" GATE_LIB_PY="$GATE_LIB_PY" \
 python3 <<'PY'
 import sys as _fc_sys  # fail-closed-on-internal-error
 try:
-    import json, os, posixpath, re, sys
+    import importlib.util, json, os, posixpath, re, sys
 
     def deny(m):
         sys.stderr.write("brand-design: refused — %s\n" % m); sys.exit(2)
 
+    _spec = importlib.util.spec_from_file_location("gate_lib", os.environ["GATE_LIB_PY"])
+    gate_lib = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(gate_lib)
+
     raw = os.environ.get("PG_PAYLOAD", "")
-    try:
-        ev = json.loads(raw) if raw else {}
-    except ValueError:
-        deny("the tool-call payload is not valid JSON; the gate cannot judge methodology fields on an unparseable write.")
-    if not isinstance(ev, dict):
-        deny("the tool-call payload is not a JSON object; failing closed on methodology.")
+    ev = gate_lib.gate_parse_json_or_deny(raw, deny)
 
     tool = ev.get("tool_name")
+    if tool not in ("Write", "Edit", "MultiEdit"):
+        sys.exit(0)
+
     ti = ev.get("tool_input")
     if not isinstance(ti, dict):
         deny("tool_input is missing or not a JSON object; the gate cannot judge a write it cannot parse (methodology).")
 
-    root = posixpath.normpath(os.environ["PG_ROOT"].replace("\\", "/"))
+    root = os.path.realpath(os.environ["PG_ROOT"]).replace("\\", "/")
     RECORD_RE = re.compile(r'^docs/issue-[0-9]+/reports/brand-design\.md$')
     PROPOSAL_RE = re.compile(r'^docs/issue-[0-9]+/proposals/.*brand-design.*\.md$', re.I)
 
-    def resolve(p):
-        n = p.replace("\\", "/")
-        a = n if posixpath.isabs(n) else posixpath.join(root, n)
-        a = posixpath.normpath(a)
-        try:
-            return posixpath.normpath(os.path.realpath(a).replace("\\", "/"))
-        except OSError:
-            return a
-
-    path = None
-    if tool in ("Write", "Edit", "MultiEdit"):
-        p = ti.get("file_path")
-        if isinstance(p, str) and p:
-            path = p
-    if path is None:
+    path = ti.get("file_path")
+    if not isinstance(path, str) or not path:
         sys.exit(0)
 
-    r = resolve(path)
-    if not r.startswith(root + "/"):
-        sys.exit(0)
-    rel = r[len(root):].lstrip("/")
+    rel = gate_lib.gate_normalize_path(root, path)
+    if rel is None:
+        sys.exit(0)  # resolves outside the project root — not this gate's business
     if not RECORD_RE.match(rel):
-        sys.exit(0)
+        sys.exit(0)  # not this role's own record — not this gate's business
 
+    abs_path = root + "/" + rel if rel else root
     current = None
-    if os.path.isfile(r):
+    if os.path.isfile(abs_path):
         try:
-            with open(r, encoding="utf-8-sig") as fh:
+            with open(abs_path, encoding="utf-8-sig") as fh:
                 current = fh.read(1 << 20)
         except OSError:
             deny("%s exists but cannot be read; failing closed on methodology." % rel)
 
-    new_text = None
-    if tool == "Write":
-        c = ti.get("content")
-        if isinstance(c, str):
-            new_text = c
-    elif tool == "Edit":
-        o, n = ti.get("old_string"), ti.get("new_string")
-        if isinstance(o, str) and isinstance(n, str) and current is not None and o in current:
-            new_text = current.replace(o, n, 1)
-    elif tool == "MultiEdit":
-        edits = ti.get("edits")
-        text = current
-        if isinstance(edits, list) and text is not None:
-            ok = True
-            for e in edits:
-                if not isinstance(e, dict):
-                    ok = False; break
-                o, n = e.get("old_string"), e.get("new_string")
-                if not isinstance(o, str) or not isinstance(n, str) or o not in text:
-                    ok = False; break
-                text = text.replace(o, n, 1)
-            if ok:
-                new_text = text
-
-    if new_text is None:
+    new_text, ok = gate_lib.gate_reconstruct_write(tool, ti, current)
+    if not ok:
         deny(
             "this write targets %s but the gate cannot determine the resulting content "
             "from the tool input (tool=%r). Write the full document with Write, or use an "
@@ -156,30 +125,91 @@ try:
             "can be checked." % (rel, tool)
         )
 
-    # Design-system source paths: a literal path-shaped token (contains
-    # "/") that is not itself one of this repo's own write-surface
-    # patterns (proposal/record path regexes), i.e. an actual repo path
-    # like "ux-engineering/tokens/color.json" rather than a description.
-    path_token = None
-    for m in re.finditer(r'`?([\w][\w./-]*\/[\w][\w./-]*)`?', new_text):
-        cand = m.group(1)
-        if PROPOSAL_RE.match(cand) or RECORD_RE.match(cand):
-            continue
-        if cand.startswith("http://") or cand.startswith("https://"):
-            continue
-        path_token = cand
-        break
+    # --- design-system source paths: section/adjacency-scoped -----------
+    # The label "design-system source paths" (or "design system source
+    # paths") must appear as a heading-shaped (`^\s*#{1,6}\s*<label>`) or
+    # label-shaped (`^\s*<label>\s*:`) line, case-insensitive, checked
+    # line-by-line — not a flat substring/lowercased-and-flattened
+    # membership test. The concrete literal path token, or an explicit
+    # "not applicable"/"no new pairing introduced" allowance, must occur
+    # within that label's own paragraph (the label line through the next
+    # blank line or next label/heading line).
+    LABEL_RE = re.compile(
+        r'^\s*(?:#{1,6}\s*)?design[- ]system source paths\s*:?\s*(.*)$',
+        re.I,
+    )
+    ANY_HEADING_OR_LABEL_RE = re.compile(r'^\s*(?:#{1,6}\s+\S|[A-Za-z][A-Za-z0-9_ -]*:\s*)')
+    NOT_APPLICABLE_RE = re.compile(r'(?i)\bnot applicable\b|\bno new pairing introduced\b')
+    # A literal repo path token: contains "/", not this repo's own
+    # write-surface patterns (proposal/record path regexes), not a URL.
+    PATH_TOKEN_RE = re.compile(r'`?([\w][\w./-]*\/[\w][\w./-]*)`?')
 
-    if path_token is None:
+    def is_own_surface_or_url(cand):
+        if PROPOSAL_RE.match(cand) or RECORD_RE.match(cand):
+            return True
+        if cand.startswith("http://") or cand.startswith("https://"):
+            return True
+        return False
+
+    lines = new_text.splitlines()
+    label_idx = None
+    trailing = ""
+    for i, line in enumerate(lines):
+        m = LABEL_RE.match(line)
+        if m:
+            label_idx = i
+            trailing = m.group(1) or ""
+            break
+
+    if label_idx is None:
         deny(
             "brand-design record is missing required element: design-system-source-paths. "
             "Per docs/issue-1/proposals/2026-07-31-brand-design-methodology-charter.md, "
             "every brand-design phase-2 record must name literal repo paths for the "
             "design-system sources it touched or hands off, not a description of what "
-            "ux-engineering 'should' build."
+            "ux-engineering 'should' build. The label must appear on its own heading- or "
+            "label-shaped line (e.g. '## design-system source paths' or "
+            "'design-system source paths: ...')."
+        )
+
+    # paragraph span: label line through next blank line or next
+    # heading/label-shaped line (exclusive), starting from any trailing
+    # content on the label line itself.
+    para_lines = [trailing]
+    j = label_idx + 1
+    while j < len(lines):
+        line = lines[j]
+        if line.strip() == "":
+            break
+        if ANY_HEADING_OR_LABEL_RE.match(line) and not line.strip().lower().startswith(("http://", "https://")):
+            break
+        para_lines.append(line)
+        j += 1
+    paragraph = "\n".join(para_lines)
+
+    if NOT_APPLICABLE_RE.search(paragraph):
+        sys.exit(0)
+
+    found_path = False
+    for m in PATH_TOKEN_RE.finditer(paragraph):
+        cand = m.group(1)
+        if is_own_surface_or_url(cand):
+            continue
+        found_path = True
+        break
+
+    if not found_path:
+        deny(
+            "brand-design record has a design-system-source-paths label but no literal repo "
+            "path (or an explicit 'not applicable' / 'no new pairing introduced' allowance) "
+            "within that label's own paragraph. Per docs/issue-1/proposals/"
+            "2026-07-31-brand-design-methodology-charter.md, name literal repo paths for the "
+            "design-system sources touched or handed off, in the same paragraph as the label."
         )
 
     sys.exit(0)
+except SystemExit:
+    raise
 except Exception as _fc_e:  # fail-closed-on-internal-error
     _fc_sys.stderr.write("methodology-gate.sh: fail-closed: internal error: %r\n" % (_fc_e,))
     _fc_sys.exit(2)
