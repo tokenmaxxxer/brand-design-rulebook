@@ -7,7 +7,6 @@ files:
   - docs/handbooks/brand-design/methodology.md
   - brand-design/hooks/directive.sh
   - brand-design-guide-and-spec/README.md
-  - docs/specs/record-fields-terminal-states.json
   - docs/issue-20/reports/implementation.md
 ---
 
@@ -78,11 +77,25 @@ that check by construction. The current repo has no
 confirmed by `find`), so this rulebook has never actually fixed its own
 `loop_state` set — nothing is being taken away that was load-bearing;
 `scope-proposed`/`open` were informal choices in past records, not a
-documented, gate-enforced vocabulary. Phase 2 will therefore create
-`docs/specs/record-fields-terminal-states.json` (`{"brand-design":
-["landed"]}` as the mechanical terminal-state override, matching the
-spec's `terminal: ["landed"]`) and document the full five-word
-progress/terminal/refusal/error split in the methodology handbook.
+documented, gate-enforced vocabulary. Phase 2 documents the full
+five-word progress/terminal/refusal/error split in the methodology
+handbook, as prose vocabulary only — it does **not** create
+`docs/specs/record-fields-terminal-states.json`. A dispatched warrant
+hunt on this proposal (after-proposal transition, stance 0) found that
+core's `record-fields-gate.sh` requires that file's keys to be one of a
+fixed, closed set of contract-§2 `kind` names
+(`coding-record`/`qa-record`/etc.) — `brand-design` is not among them
+and is not in `ROLE_TO_KIND` either, so a `{"brand-design": [...]}`
+entry would be refused as an "unrecognized kind" and the gate denies
+**every** subsequent record write repo-wide, not just brand-design's,
+per the gate's own fail-loudly design. The gate has no supported
+per-role override path for a role outside its fixed kind set; `role:
+brand-design` records instead fall back to the gate's legacy default
+terminal set (`landed complete closed done delivered
+phase-2-complete`), which already contains `landed` — the spec's own
+terminal word — so no gate-side change is needed or possible here. This
+proposal therefore does not touch that file at all; the loop_state
+alignment is documentation-only.
 
 ## What will be done
 
@@ -118,11 +131,7 @@ progress/terminal/refusal/error split in the methodology handbook.
    parenthetical field-name mapping to its existing "Asset spec"
    bullet, so the plugin's own README (read by anyone installing it in
    isolation) is not left silently behind the handbook.
-4. **`docs/specs/record-fields-terminal-states.json`** (new file) —
-   `{"brand-design": ["landed"]}`, matching the spec's
-   `terminal: ["landed"]` exactly, per the repo-override mechanism this
-   session's own contract reminder documents.
-5. **`docs/issue-20/reports/implementation.md`** — phase-2 record, per
+4. **`docs/issue-20/reports/implementation.md`** — phase-2 record, per
    contract v3 s19, written only after approval opens phase 2.
 
 ## Out of scope
@@ -145,6 +154,10 @@ progress/terminal/refusal/error split in the methodology handbook.
   follow-up if a future issue asks for it, not implied by this one.
 - `design-tokens/*.json` write-scope handling — this repo does not
   currently produce or consume that file; nothing here creates it.
+- Creating `docs/specs/record-fields-terminal-states.json` (see
+  Rationale) — the gate has no supported override key for the
+  `brand-design` role, and creating that file would deny every
+  subsequent record write repo-wide, not just brand-design's.
 
 ## How you'll know it worked
 
