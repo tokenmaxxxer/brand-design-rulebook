@@ -29,3 +29,29 @@ Every brand-design record write is denied unconditionally once this override fil
 
 ### Expected
 Per §20/C2 and the gate's own validation, the override key must be a *kind* (e.g. `coding-record`) drawn from `KIND_TERMINAL_DEFAULTS`, not a role name. A correct override for brand-design would first require brand-design to be added to `ROLE_TO_KIND` (or a `brand-design-record` kind added to `KIND_TERMINAL_DEFAULTS`) in core — neither of which this rulebook-side proposal can do, since `core/hooks/record-fields-gate.sh` lives outside this repo (in `tokenmaxxxer-core`, referenced but not vendored here). The proposal's phase-2 step 4 as written will fail-closed the role's entire record surface rather than strengthen it, and the proposal's "How you'll know it worked" section never actually runs `record-fields-gate.sh` against a real record, so this breakage would land invisibly.
+
+## before-landing — stance 3: assume the rule as written cannot hold — find the state nothing maintains
+
+Verdict: FINDING — methodology.md's new "Design-token vocabulary" section names two artifacts, `roles/specs/brand-design.spec.json` and `on-the-record/hooks/role-spec-reference-guard.sh`, that do not exist anywhere in the repo (working tree or git history), so the `reference_resolution` check it claims is "external" and enforced is not maintained by anything.
+Kind: design-error
+Seed: docs/handbooks/brand-design/methodology.md diff (new "Design-token vocabulary (spec-aligned)" section, `token_name` bullet)
+cap_seconds: 120
+tier: default
+diff_stat_lines: ~80
+started_at: 2026-08-09T05:50:43+09:00
+ended_at: 2026-08-09T05:53:00+09:00
+
+### Reproduce
+```
+cd /home/jwjung/.tokenmaxxxer/work/brand-design-rulebook-issue-20-implementation
+find . -iname "*.spec.json" 2>/dev/null
+find . -iname "role-spec-reference-guard.sh" 2>/dev/null
+find . -maxdepth 2 -iname "*on-the-record*" 2>/dev/null
+git log --all --oneline -- "**/role-spec-reference-guard.sh" "**/brand-design.spec.json"
+```
+
+### Observed
+All four commands return empty output — no such files exist in the working tree, and no commit in the repo's history ever created them.
+
+### Expected
+The handbook prose states the token_name field must be "resolvable to an actual `design-tokens/*.json` entry whenever a token file is in play (the spec's `reference_resolution` rule; the resolution check itself is external, per `on-the-record/hooks/role-spec-reference-guard.sh`)" — implying a real, external enforcement mechanism exists and is merely out of scope for this repo's checker. Since neither `roles/specs/brand-design.spec.json` nor the named guard script exists anywhere (checked working tree and full git history), this "reference_resolution" check is state nothing maintains: any future record can claim a `token_name` and no mechanism, in this repo or the one it points to, will ever verify it resolves to a real token-file entry. The prose reads as describing an enforced rule but is unenforceable as written — the citation names something absent.

@@ -52,6 +52,37 @@ Owned by `brand-design-kapferer-scope-guard` (phase-1 mode).
       systemization work performed by this role — did you state "not
       triggered" or how it was avoided?
 
+## Design-token vocabulary (spec-aligned)
+
+Maps `roles/specs/brand-design.spec.json`'s required deliverable fields
+and `loop_state` vocabulary onto this handbook's existing concepts —
+strengthening the phase-2 checklist above, not replacing it.
+
+- **`token_name`** maps onto the existing "asset spec" item's
+  identifier half — the record must name which token the applied value
+  belongs to, resolvable to an actual `design-tokens/*.json` entry
+  whenever a token file is in play (the spec's `reference_resolution`
+  rule; the resolution check itself is external, per
+  `on-the-record/hooks/role-spec-reference-guard.sh`).
+- **`token_type`** maps onto the existing "asset spec" item's format
+  half, formalized to the DTCG enum — `color`, `dimension`,
+  `fontFamily`, `fontWeight`, `duration`, `cubicBezier`, `number` — as
+  the closed vocabulary for "asset class" when the deliverable is a
+  token rather than a general visual asset.
+- **`value`** maps onto the existing "asset spec" item's literal-value
+  requirement verbatim — no change to that checklist language; `value`
+  is simply the spec's name for what this handbook already calls "the
+  applied value."
+- **`loop_state`** — this rulebook's own `loop_state` words for
+  `brand-design` records are, going forward, exactly the spec's five:
+  `designing` and `validating` (progress), `landed` (terminal),
+  `type-undeclared` (refusal), `token-file-unreachable` (error). This
+  replaces informal past usage (`scope-proposed`, `open`); it does not
+  create a `docs/specs/record-fields-terminal-states.json` override
+  (see `docs/issue-20/proposals/
+  2026-08-09-brand-design-spec-vocabulary-alignment.md`, Rationale, for
+  why the gate has no supported override key for this role).
+
 ## Open decisions this handbook does not resolve
 
 - **State-tracking**: not adopted (see `docs/issue-10/proposals/
