@@ -20,7 +20,9 @@ the resulting content carries:
 2. **Asset spec** — the literal applied value (color/hex or a
    file-format/path token) appearing a second, distinct time from the
    brand guide entry's rule statement — restating the rule instead of
-   the applied value is a fail.
+   the applied value is a fail. (Spec-aligned field names:
+   `token_name`, `token_type`, `value` — see
+   `docs/handbooks/brand-design/methodology.md`.)
 
 Fail-closed: any internal error, unparseable payload, or
 undeterminable resulting content denies the write. Writes outside the
