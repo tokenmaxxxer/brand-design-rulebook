@@ -8,6 +8,31 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 GATE="$HERE/../methodology-gate.sh"
+
+# --- test-env resolution (docs/specs/test-env-resolution.md, on-the-record
+# issue #551): resolve core outside the spawn env or SKIP, rather than
+# letting the gate's own guarded gate-lib.sh source fail closed and report
+# misleading FAILs. Order: $CLAUDE_PLUGIN_ROOT_CORE (non-empty gate-lib.sh)
+# -> sibling candidate (non-empty gate-lib.sh) -> SKIP, exit 75. ---
+_resolve_core() {
+  if [ -n "${CLAUDE_PLUGIN_ROOT_CORE:-}" ] && [ -s "$CLAUDE_PLUGIN_ROOT_CORE/hooks/lib/gate-lib.sh" ]; then
+    return 0
+  fi
+  local candidate resolved
+  for candidate in "$HERE/../../../core"; do
+    resolved="$(cd "$candidate" 2>/dev/null && pwd -P)"
+    if [ -n "$resolved" ] && [ -s "$resolved/hooks/lib/gate-lib.sh" ]; then
+      export CLAUDE_PLUGIN_ROOT_CORE="$resolved"
+      return 0
+    fi
+  done
+  return 1
+}
+if ! _resolve_core; then
+  echo "SKIP: core plugin unreachable — unverifiable outside spawn env" >&2
+  exit 75
+fi
+
 pass=0; fail=0
 report() { if [ "$2" = "$1" ]; then pass=$((pass+1)); printf 'ok     %-34s %s\n' "$3" "$2"; else fail=$((fail+1)); printf 'FAIL   %-34s want=%s got=%s\n' "$3" "$1" "$2"; fi; }
 
