@@ -33,6 +33,12 @@ claude plugin install brand-design
   the ux-engineering hand-off boundary gate; see its own README.
 - `brand-design-wcag-consistency/` — consistency-check + WCAG contrast
   gate; see its own README.
+- `playbook/` — operational decision-rule tables (issue-1174):
+  condition->choice->why, per-rule source citation, one file per
+  decision axis (`color-visibility.md`, `logo-clear-space-size.md`,
+  `typography-pairing.md`, `brand-consistency-governance.md`,
+  `brand-identity-strategy.md`); each rule block carries a `source:`
+  citation and a counter-example test.
 - `docs/specs/approvers.md` — Approve-authority allowlist (see below)
 
 Each `brand-design-*/hooks/methodology-gate.sh` reference-adopts
