@@ -42,6 +42,10 @@ export BRAND_DESIGN_SYSTEM_HANDOFF_GATE_OFF=1
 bash hooks/tests/methodology-gate-tests.sh
 ```
 
+See also `docs/handbooks/brand-design/methodology.md`'s "Tool learnings
+(issue-1199)" section for the diagram/asset-type-enum and
+downstream-consumer sub-requirements this gate's path check rests on.
+
 ## Relationship to core canon
 
 Additive on top of core's generic `record-fields-gate.sh` (§20 fields),

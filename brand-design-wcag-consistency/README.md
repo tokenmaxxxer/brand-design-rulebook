@@ -40,6 +40,10 @@ export BRAND_DESIGN_WCAG_CONSISTENCY_GATE_OFF=1
 bash hooks/tests/methodology-gate-tests.sh
 ```
 
+See also `docs/handbooks/brand-design/methodology.md`'s "Tool learnings
+(issue-1199)" section for the per-pairing pass/fail granularity this
+gate's consistency check rests on.
+
 ## Relationship to core canon
 
 Additive on top of core's generic `record-fields-gate.sh` (§20 fields),

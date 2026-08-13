@@ -83,6 +83,63 @@ strengthening the phase-2 checklist above, not replacing it.
   2026-08-09-brand-design-spec-vocabulary-alignment.md`, Rationale, for
   why the gate has no supported override key for this role).
 
+## Tool learnings (issue-1199)
+
+Bounded fold-in from a surveyed tool-landscape sweep (adoption-evidence
+method per the tech-feasibility skill; full trail in
+`docs/issue-1199/reports/brand-design/scout-brief.md` on the
+`on-the-record` working tree). Five entries, each borrowing a design
+move, not the tool itself.
+
+1. **diagram-design** (`github.com/cathrynlavery/diagram-design`;
+   trending-repo listing at
+   `trendshift.io/repositories/26141`). Problem: ad hoc diagram tooling
+   (e.g. Mermaid) produces visually inconsistent, templated output for
+   stakeholder-facing handoffs. How: a bounded, named list of diagram
+   types, each rendered as self-contained HTML+SVG with a fixed visual
+   style — no free-form category field. Upgrades: the **Design-system
+   source paths** item above gains a companion requirement — name the
+   diagram/asset TYPE from a fixed list (e.g. `component-map`,
+   `token-flow`, `layout-grid`), not a free-form description, alongside
+   the literal path.
+2. **Style Dictionary** (`github.com/style-dictionary/style-dictionary`,
+   an Amazon-originated build system with broad topic/dependent-package
+   presence on GitHub). Problem: a token value hand-copied into each
+   platform drifts from its source. How: a single source-of-truth
+   token file transformed into every consuming format by one pipeline,
+   never edited per-platform. Upgrades: the **Asset spec** item above
+   gains a distinct sub-requirement — name the token source-of-truth
+   file path (e.g. `design-tokens/color.json`), separate from the
+   applied value already required.
+3. **Tokens Studio for Figma** (`tokens-studio/figma-plugin`; cited
+   production use at TomTom and Babbel per `docs.tokens.studio`).
+   Problem: multi-brand or multi-theme token sets re-diverge when each
+   theme is maintained by hand. How: a graph-structured token model
+   with explicit theme composition, synced to git as JSON. Upgrades:
+   the **Brand guide entry** item above gains a sub-requirement — when
+   more than one brand/theme variant is touched, name which variant(s)
+   explicitly, never left implicit.
+4. **Stark** (`getstark.co/figma/`; vendor-stated 40,000+ users across
+   28,000+ companies, and separately 230,000+ users on its Figma
+   community-plugin page). Problem: an aggregate "looks fine" contrast
+   review misses individual failing pairings inside a mostly-passing
+   set. How: automated per-element contrast ratio and pass/fail badge,
+   computed per pairing rather than once for the whole surface.
+   Upgrades: the **Consistency check** item above is reworded in
+   practice to require one explicit pass/fail line per distinct
+   text/background pairing, not one consolidated verdict covering
+   several pairings.
+5. **zeroheight** (`zeroheight.com/measurement/`; multiple published
+   customer case studies and its own annual Design Systems Report).
+   Problem: a design-system handoff artifact can exist and still go
+   unread — "driving adoption" is zeroheight's own report data's top
+   recurring challenge. How: track documentation engagement and
+   downstream component usage as a signal distinct from artifact
+   existence. Upgrades: the **Design-system source paths** item above
+   gains a sub-requirement — name which downstream role/path is
+   expected to actually consume the handoff, not only where the
+   artifact lives.
+
 ## Open decisions this handbook does not resolve
 
 - **State-tracking**: not adopted (see `docs/issue-10/proposals/
