@@ -47,6 +47,10 @@ export BRAND_DESIGN_GUIDE_AND_SPEC_GATE_OFF=1
 bash hooks/tests/methodology-gate-tests.sh
 ```
 
+See also `docs/handbooks/brand-design/methodology.md`'s "Tool learnings
+(issue-1199)" section for the token-source-of-truth-path and
+multi-brand-variant sub-requirements this gate's checklist items rest on.
+
 ## Relationship to core canon
 
 Additive on top of core's generic `record-fields-gate.sh` (§20 fields),
