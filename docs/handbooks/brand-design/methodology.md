@@ -140,6 +140,53 @@ move, not the tool itself.
    expected to actually consume the handoff, not only where the
    artifact lives.
 
+### Claude Code plugin/skill ecosystem (issue-1199, 2026-08-14 amendment)
+
+Operator amendment narrowed the survey target to the Claude Code
+plugin/skill ecosystem itself (marketplace/community plugins), not
+general domain tools — the five entries above stay as native rules;
+these three are additive, sourced from web-fetched GitHub pages this
+session (full trail in
+`docs/issue-1199/reports/brand-design/scout-brief.md` on the
+`on-the-record` working tree).
+
+6. **awesome-claude-design / DESIGN.md** (`github.com/VoltAgent/
+   awesome-claude-design`; 3.4k GitHub stars, 375 forks). Problem: a
+   brand's visual language, once agreed, gets re-derived by hand (or
+   re-guessed by an AI agent) every time a downstream surface is built,
+   drifting from the source decision. How: one machine-readable
+   `DESIGN.md` file keeps token value, the rule that constrains it, and
+   the rationale for the rule together in the same file, so an
+   agent reads intent and constraint in one place rather than
+   inferring intent from a token list. Upgrades: the **Brand guide
+   entry** item above gains a sub-requirement — state the rationale for
+   each token/rule pairing inline, not only the resolved value, so a
+   downstream agent consuming the guide does not have to re-derive
+   *why*.
+7. **design-for-ai** (`github.com/ryanthedev/design-for-ai`; 279 GitHub
+   stars). Problem: AI-generated visual design converges on generic,
+   statistically-average output (uniform card grids, glassmorphism)
+   because nothing pins the design decision space before generation.
+   How: a "pinnable design DNA" step locks aesthetic constraints (font
+   family, color hue, signature moves) *before* any candidate is
+   generated, and every resulting decision must trace to a documented
+   design principle rather than subjective preference. Upgrades: the
+   **Consistency check** item above gains a sub-requirement — record
+   which constraint (from the brand guide) each checked element traces
+   to, not just its pass/fail verdict, so a failing element points back
+   to the specific pinned constraint it violates.
+8. **rampstackco/claude-skills brand-style-guide** (`github.com/
+   rampstackco/claude-skills`; 540 GitHub stars). Problem: brand
+   deliverables authored independently (identity, voice, style guide,
+   archetype) drift out of sync because each is written in its own
+   structure. How: every skill in the catalog shares one section order,
+   tone, and authoring convention, so outputs compose without a manual
+   reconciliation pass. Upgrades: the **Design-system source paths**
+   item above gains a sub-requirement — new brand-design deliverables
+   must reuse the existing phase-2 record's section order rather than
+   introduce a new structure per deliverable, mirroring this catalog's
+   uniform-structure move.
+
 ## Open decisions this handbook does not resolve
 
 - **State-tracking**: not adopted (see `docs/issue-10/proposals/
